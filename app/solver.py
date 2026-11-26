@@ -75,10 +75,19 @@ def build_config(form, roll_count, pair_count):
     repeat = _parse_int(form.get("repeat"), "花距", 1, MAX_POSITION)
     rolls = []
     for i in range(MAX_ROLLS):
-        reference = _parse_int(form.get(f"ref_{i}"), f"第 {i + 1} 卷花纹基准", 0, MAX_POSITION)
+        raw_ref = form.get(f"ref_{i}")
         if i < roll_count:
+            reference = _parse_int(raw_ref, f"第 {i + 1} 卷花纹基准", 0, MAX_POSITION)
             sections = parse_sections(form.get(f"sections_{i}"))
         else:
+            # 未启用的卷行在浏览器中会被禁用而不提交；缺失时用默认值，
+            # 避免“卷数 < 3 时无法保存参数”。
+            if raw_ref in (None, ""):
+                reference = 0
+            else:
+                reference = _parse_int(
+                    raw_ref, f"第 {i + 1} 卷花纹基准", 0, MAX_POSITION
+                )
             sections = [[0, MAX_POSITION]]
         rolls.append({"index": i, "reference": reference, "sections": sections})
     pairs = []
@@ -185,8 +194,11 @@ def solve(cfg, cuts):
     refs = {r["index"]: r["reference"] for r in rolls}
 
     cut_map = {(c["pair_index"], c["side"]): c for c in cuts}
+    pair_by_index = {p["index"]: p for p in pairs}
 
-    # 防御性检查：已裁记录必须仍在当前配置范围内
+    # 防御性检查：已裁记录必须仍在当前配置范围内，且与当前参数一致。
+    # 旧版本并发缺陷可能留下“A 片按旧裁长入账、参数已改”的记录；
+    # 这里拒绝继续排料，绝不按新裁长给同对另一片排料。
     for c in cuts:
         if c["roll_index"] not in refs:
             return False, f"已裁记录引用了不存在的第 {c['roll_index'] + 1} 卷"
@@ -198,6 +210,22 @@ def solve(cfg, cuts):
                 f"第 {c['pair_index'] + 1} 对"
                 f"{'A' if c['side'] == 0 else 'B'}片的已裁区段 "
                 f"{c['start_pos']}-{c['end_pos']} 已不在当前可用区段内"
+            )
+        recorded_len = c.get("length")
+        if recorded_len is not None:
+            current_len = pair_by_index[c["pair_index"]]["length"]
+            if recorded_len != current_len:
+                return False, (
+                    f"第 {c['pair_index'] + 1} 对已裁记录裁长 {recorded_len} 厘米"
+                    f"与当前参数裁长 {current_len} 厘米不一致，无法继续排料；"
+                    "已裁记录继续保留，请恢复原裁长或清空记录重新开工"
+                )
+        recorded_ref = c.get("reference")
+        if recorded_ref is not None and recorded_ref != refs[c["roll_index"]]:
+            return False, (
+                f"第 {c['roll_index'] + 1} 卷已裁记录花纹基准 {recorded_ref} 厘米"
+                f"与当前参数基准 {refs[c['roll_index']]} 厘米不一致，无法继续排料；"
+                "已裁记录继续保留，请恢复原基准或清空记录重新开工"
             )
 
     # 同对两片都已裁时，历史花位余数必须一致

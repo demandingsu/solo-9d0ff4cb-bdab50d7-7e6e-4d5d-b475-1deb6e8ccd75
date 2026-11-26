@@ -128,6 +128,10 @@
             <form method="post" action="{{ url_for('cut_route') }}" class="inline">
               <input type="hidden" name="pair_index" value="{{ it.pair_index }}">
               <input type="hidden" name="side" value="{{ it.side }}">
+              <input type="hidden" name="layout_fp" value="{{ layout_fp }}">
+              <input type="hidden" name="roll_index" value="{{ it.roll_index }}">
+              <input type="hidden" name="start_pos" value="{{ it.start_pos }}">
+              <input type="hidden" name="end_pos" value="{{ it.end_pos }}">
               <button type="submit" class="small">确认已裁</button>
             </form>
           {% endif %}

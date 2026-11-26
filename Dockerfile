@@ -16,4 +16,5 @@ VOLUME ["/data"]
 
 EXPOSE 8000
 
+# 启动时 create_app() 会幂等建表（仅新增 state 表），既有 SQLite 已裁记录保留。
 CMD ["python", "wsgi.py"]

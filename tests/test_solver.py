@@ -198,6 +198,23 @@ def test_validate_against_cuts_protection():
     assert solver.validate_against_cuts(cfg_fewer, cuts)
 
 
+def test_solve_rejects_cut_length_mismatch():
+    cfg = make_cfg()
+    # 历史并发缺陷遗留：A 片按旧裁长 70 入账，当前参数已改为 80
+    cuts = [{"pair_index": 0, "side": 0, "roll_index": 0,
+             "start_pos": 0, "end_pos": 70, "reference": 0, "length": 70}]
+    ok, msg = solver.solve(cfg, cuts)
+    assert not ok and "裁长" in msg and "不一致" in msg, msg
+
+
+def test_solve_rejects_cut_reference_mismatch():
+    cfg = make_cfg()
+    cuts = [{"pair_index": 0, "side": 0, "roll_index": 0,
+             "start_pos": 0, "end_pos": 80, "reference": 4, "length": 80}]
+    ok, msg = solver.solve(cfg, cuts)
+    assert not ok and "花纹基准" in msg and "不一致" in msg, msg
+
+
 def test_fingerprint_changes_with_sections():
     c1 = make_cfg()
     c2 = make_cfg()
