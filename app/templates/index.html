@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>窗帘对花补裁</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header>
+  <h1>窗帘对花补裁</h1>
+  <p class="hint">最多 3 卷、3 对；每卷最长 300 厘米，位置与长度均为整数厘米。区段写法如 <code>0-120, 150-300</code>（半开区间，不含终点）。</p>
+</header>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <section class="messages">
+      {% for category, message in messages %}
+        <div class="msg {{ category }}">{{ message }}</div>
+      {% endfor %}
+    </section>
+  {% endif %}
+{% endwith %}
+
+<section class="card">
+  <h2>1. 布料与裁长参数</h2>
+  <form method="post" action="{{ url_for('save_config_route') }}" id="config-form">
+    <div class="counts">
+      <label>卷数
+        <select name="roll_count" id="roll_count">
+          {% for n in range(1, max_forms + 1) %}
+            <option value="{{ n }}" {% if n == cfg.roll_count %}selected{% endif %}>{{ n }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>对数
+        <select name="pair_count" id="pair_count">
+          {% for n in range(1, max_forms + 1) %}
+            <option value="{{ n }}" {% if n == cfg.pair_count %}selected{% endif %}>{{ n }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>花距（厘米）
+        <input type="number" name="repeat" min="1" max="300" value="{{ cfg.repeat }}" required>
+      </label>
+    </div>
+
+    <h3>各卷布料</h3>
+    <table class="grid">
+      <thead><tr><th>卷号</th><th>花纹基准（厘米）</th><th>可用区段（厘米）</th></tr></thead>
+      <tbody>
+      {% for i in range(max_forms) %}
+        {% set roll = cfg.rolls[i] %}
+        <tr class="roll-row" data-index="{{ i }}" {% if i >= cfg.roll_count %}hidden{% endif %}>
+          <td>第 {{ i + 1 }} 卷</td>
+          <td><input type="number" name="ref_{{ i }}" min="0" max="300"
+                     value="{{ roll.reference }}" {% if i >= cfg.roll_count %}disabled{% endif %}></td>
+          <td><input type="text" name="sections_{{ i }}" class="sections"
+                     value="{{ roll_sections_text[i] }}" placeholder="0-300"
+                     {% if i >= cfg.roll_count %}disabled{% endif %}></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+
+    <h3>各对帘片裁长</h3>
+    <table class="grid">
+      <thead><tr><th>对号</th><th>裁长（厘米）</th></tr></thead>
+      <tbody>
+      {% for j in range(max_forms) %}
+        {% set pair = cfg.pairs[j] %}
+        <tr class="pair-row" data-index="{{ j }}" {% if j >= cfg.pair_count %}hidden{% endif %}>
+          <td>第 {{ j + 1 }} 对</td>
+          <td><input type="number" name="length_{{ j }}" min="1" max="300"
+                     value="{{ pair.length }}" {% if j >= cfg.pair_count %}disabled{% endif %}></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+
+    <div class="actions">
+      <button type="submit">保存参数</button>
+    </div>
+  </form>
+</section>
+
+<section class="card">
+  <h2>2. 生成排法</h2>
+  {% if current_fp is none %}
+    <p class="hint">请先保存参数。</p>
+  {% else %}
+    <form method="post" action="{{ url_for('solve_route') }}">
+      <button type="submit">生成排法（对花 + 补裁）</button>
+    </form>
+    {% if not layout_items %}
+      <p class="hint">尚未生成排法，或上次求解无解。</p>
+    {% elif not layout_fresh %}
+      <p class="msg error">参数（含可用区段）已改动，当前排法是旧排法，不能据此确认未裁片，请重新生成。</p>
+    {% else %}
+      <p class="msg ok">当前排法与参数一致，可逐片确认已裁。</p>
+    {% endif %}
+  {% endif %}
+
+  {% if layout_items %}
+  <table class="grid result">
+    <thead>
+      <tr>
+        <th>帘片</th><th>卷号</th><th>起刀位置</th><th>止刀位置</th>
+        <th>花位余数</th><th>状态</th><th>操作</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for it in layout_items %}
+      {% set is_cut = (it.pair_index, it.side) in cut_keys %}
+      <tr class="{% if is_cut %}cut-row{% elif not layout_fresh %}stale-row{% endif %}">
+        <td>第 {{ it.pair_index + 1 }} 对 {{ 'A' if it.side == 0 else 'B' }} 片</td>
+        <td>第 {{ it.roll_index + 1 }} 卷</td>
+        <td>{{ it.start_pos }}</td>
+        <td>{{ it.end_pos }}</td>
+        <td>{{ it.residue }}</td>
+        <td>{% if is_cut %}已裁{% else %}未裁{% endif %}</td>
+        <td>
+          {% if is_cut %}
+            —
+          {% elif not layout_fresh %}
+            旧排法不可确认
+          {% else %}
+            <form method="post" action="{{ url_for('cut_route') }}" class="inline">
+              <input type="hidden" name="pair_index" value="{{ it.pair_index }}">
+              <input type="hidden" name="side" value="{{ it.side }}">
+              <button type="submit" class="small">确认已裁</button>
+            </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+
+<section class="card">
+  <h2>3. 已裁记录（SQLite）</h2>
+  {% if cuts %}
+  <table class="grid">
+    <thead>
+      <tr><th>帘片</th><th>卷号</th><th>起</th><th>止</th><th>确认时间</th></tr>
+    </thead>
+    <tbody>
+    {% for c in cuts %}
+      <tr>
+        <td>第 {{ c.pair_index + 1 }} 对 {{ 'A' if c.side == 0 else 'B' }} 片</td>
+        <td>第 {{ c.roll_index + 1 }} 卷</td>
+        <td>{{ c.start_pos }}</td>
+        <td>{{ c.end_pos }}</td>
+        <td>{{ c.created_at }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+    <p class="hint">暂无已裁记录。</p>
+  {% endif %}
+  <form method="post" action="{{ url_for('reset_route') }}" class="reset-form"
+        onsubmit="return confirm('确定清空全部已裁记录和排法吗？');">
+    <button type="submit" class="danger">清空已裁记录（重新开工）</button>
+  </form>
+</section>
+
+<script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

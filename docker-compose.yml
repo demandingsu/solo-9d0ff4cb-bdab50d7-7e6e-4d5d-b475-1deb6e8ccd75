@@ -1,0 +1,16 @@
+services:
+  web:
+    build: .
+    image: curtain-pattern-cut:latest
+    container_name: curtain-pattern-cut
+    ports:
+      - "8000:8000"
+    volumes:
+      - curtain_data:/data
+    environment:
+      DATABASE_PATH: /data/curtain.db
+      SECRET_KEY: change-me-in-production
+    restart: unless-stopped
+
+volumes:
+  curtain_data:

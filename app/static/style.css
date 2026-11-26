@@ -1,0 +1,91 @@
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  background: #f4f5f7;
+  color: #1f2933;
+  line-height: 1.5;
+}
+
+header {
+  background: #1f4e5f;
+  color: #fff;
+  padding: 20px 28px;
+}
+header h1 { margin: 0 0 6px; font-size: 22px; }
+header .hint { margin: 0; color: #cfe3ea; font-size: 13px; }
+
+main, body > section, body > .messages { max-width: 980px; margin: 0 auto; }
+
+.card {
+  background: #fff;
+  border: 1px solid #d9dee3;
+  border-radius: 8px;
+  margin: 18px auto;
+  padding: 18px 22px;
+  max-width: 980px;
+}
+.card h2 { margin: 0 0 12px; font-size: 18px; }
+.card h3 { margin: 16px 0 8px; font-size: 15px; color: #334155; }
+
+.counts { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 8px; }
+.counts label { display: flex; flex-direction: column; font-size: 13px; color: #52606d; gap: 4px; }
+
+.grid { width: 100%; border-collapse: collapse; margin: 8px 0; }
+.grid th, .grid td {
+  border: 1px solid #d9dee3;
+  padding: 7px 10px;
+  text-align: left;
+  font-size: 14px;
+}
+.grid thead th { background: #eef2f5; }
+.grid input[type="number"], .grid input[type="text"] {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #b8c2cc;
+  border-radius: 4px;
+  font-size: 14px;
+}
+.grid input:disabled { background: #f1f3f5; color: #9aa5b1; }
+.sections { min-width: 260px; }
+
+.actions { margin-top: 14px; }
+
+button {
+  background: #1f6f8b;
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  padding: 9px 18px;
+  font-size: 14px;
+  cursor: pointer;
+}
+button:hover { background: #17576d; }
+button.small { padding: 5px 12px; font-size: 13px; }
+button.danger { background: #a63446; margin-top: 12px; }
+button.danger:hover { background: #852a38; }
+
+.inline { display: inline; margin: 0; }
+.reset-form { margin: 0; }
+
+.messages { max-width: 980px; margin-top: 16px; }
+.msg {
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+.msg.ok { background: #e3f4e8; border: 1px solid #7fc596; color: #1e6b35; }
+.msg.error { background: #fde8eb; border: 1px solid #e295a1; color: #8a2233; }
+.hint { color: #616e7c; font-size: 13px; }
+
+.result .cut-row { background: #eef7f0; }
+.result .stale-row { background: #f6f1e3; }
+
+code {
+  background: #eef2f5;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 12px;
+}
